@@ -3,60 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upscale Image with Canvas-Sketch and Fabric.js</title>
+    <title>Upscale Image 4x bhhh bbb</title>
+    <style>
+        body { font-family: sans-serif; padding: 2em; }
+        #outputImage { margin-top: 1em; max-width: 100%; }
+    </style>
 </head>
 <body>
-    <input type="file" id="fileInput" accept="image/jpeg">
+    <h2>Upscale Image 4x (All Supported Types)</h2>
+    <input type="file" id="fileInput" accept="image/*">
     <button id="upscaleButton">Upscale Image 4x</button>
+    <br>
     <canvas id="canvas" style="display:none;"></canvas>
-    <img id="outputImage" style="display:none;">
+    <img id="outputImage" style="display:none; max-width: 100%;">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-sketch@0.3.0/dist/canvas-sketch.min.js"></script>
     <script>
         document.getElementById('upscaleButton').addEventListener('click', function() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = function() {
-                        const canvas = new fabric.Canvas('canvas');
-                        canvas.setWidth(img.width);
-                        canvas.setHeight(img.height);
 
-                        const fabricImg = new fabric.Image(img, {
+            if (!file) {
+                alert('Please select an image file first.');
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                alert('Selected file is not an image.');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const img = new window.Image();
+                img.onload = function() {
+                    // Gunakan Fabric.js untuk memproses gambar
+                    const fabricCanvas = new fabric.Canvas('canvas');
+                    fabricCanvas.clear();
+                    fabricCanvas.setWidth(img.width * 4);
+                    fabricCanvas.setHeight(img.height * 4);
+
+                    fabric.Image.fromURL(img.src, function(fabricImg) {
+                        // Skala gambar 4x
+                        fabricImg.set({
                             left: 0,
                             top: 0,
-                            selectable: false
+                            selectable: false,
+                            scaleX: 4,
+                            scaleY: 4
                         });
-                        canvas.add(fabricImg);
+                        fabricCanvas.add(fabricImg);
 
-                        // Upscale the image 4x
-                        const scaleFactor = 4;
-                        fabricImg.scaleX = scaleFactor;
-                        fabricImg.scaleY = scaleFactor;
-                        canvas.renderAll();
+                        // Render dan tampilkan hasil upscaling
+                        fabricCanvas.renderAll();
 
-                        // Create a new canvas for the upscaled image
-                        const upscaledCanvas = document.createElement('canvas');
-                        upscaledCanvas.width = img.width * scaleFactor;
-                        upscaledCanvas.height = img.height * scaleFactor;
-                        const upscaledCtx = upscaledCanvas.getContext('2d');
+                        // Deteksi format gambar asli untuk output
+                        let format = 'png';
+                        // Prefer JPEG jika asli JPEG, jika tidak default PNG
+                        if (/jpe?g/i.test(file.type)) format = 'jpeg';
+                        else if (/webp/i.test(file.type)) format = 'webp';
 
-                        // Draw the upscaled image on the new canvas
-                        upscaledCtx.drawImage(canvas.toDataURL(), 0, 0);
-
-                        // Create a new image element to display the upscaled image
                         const outputImage = document.getElementById('outputImage');
-                        outputImage.src = upscaledCanvas.toDataURL();
+                        outputImage.src = fabricCanvas.toDataURL({
+                            format: format,
+                            quality: 1.0,
+                            enableRetinaScaling: false
+                        });
                         outputImage.style.display = 'block';
-                    };
+                    }, { crossOrigin: 'anonymous' });
+
                 };
-                reader.readAsDataURL(file);
-            }
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         });
     </script>
 </body>

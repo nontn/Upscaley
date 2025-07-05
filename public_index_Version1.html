@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bot Traffic Sender</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .container { max-width: 400px; margin: 3em auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 16px #0002; padding: 2em 2em 1.5em 2em;}
+    h1 { text-align: center; }
+    input, button { font-size: 1em; margin: 0.5em 0; }
+    .stat { margin-top: 2em; text-align: center; }
+    #progressBar { width: 100%; height: 12px; background: #eee; border-radius: 6px; margin-top: 1em;}
+    #progress { height: 100%; background: #22c55e; border-radius: 6px 0 0 6px;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bot Traffic Sender</h1>
+    <form id="trafficForm">
+      <input type="url" id="url" placeholder="Masukkan URL blog (https://...)" required style="width:100%;padding:8px"><br>
+      <input type="number" id="count" placeholder="Jumlah visitor" min="1" max="100" value="1" required style="width:100%;padding:8px"><br>
+      <button type="submit" id="sendBtn">Kirim Bot Traffic</button>
+    </form>
+    <div class="stat">
+      <div id="statText">Total traffic terkirim: <span id="trafficCount">0</span></div>
+      <div id="progressBar"><div id="progress" style="width:0%"></div></div>
+    </div>
+    <div id="msg" style="color:#f00;margin-top:1em"></div>
+  </div>
+  <script>
+    async function updateStats() {
+      const r = await fetch('/api/stats');
+      const d = await r.json();
+      document.getElementById('trafficCount').textContent = d.total || 0;
+    }
+    updateStats();
+    setInterval(updateStats, 5000);
+
+    document.getElementById('trafficForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const url = document.getElementById('url').value.trim();
+      const count = parseInt(document.getElementById('count').value, 10) || 1;
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('msg').textContent = '';
+      document.getElementById('progress').style.width = '0%';
+
+      let done = 0;
+      for (let i = 0; i < count; i++) {
+        fetch('/api/send-traffic', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ url, count: 1 })
+        }).then(res => res.json()).then(r => {
+          done++;
+          document.getElementById('progress').style.width = ((done/count)*100) + '%';
+          if (done === count) {
+            updateStats();
+            document.getElementById('sendBtn').disabled = false;
+          }
+        }).catch(() => {
+          done++;
+          document.getElementById('progress').style.width = ((done/count)*100) + '%';
+          if (done === count) {
+            updateStats();
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('msg').textContent = 'Ada error pada beberapa request';
+          }
+        });
+      }
+    };
+  </script>
+</body>
+</html>

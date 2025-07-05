@@ -1,74 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Bot Traffic Sender</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
-    .container { max-width: 400px; margin: 3em auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 16px #0002; padding: 2em 2em 1.5em 2em;}
-    h1 { text-align: center; }
-    input, button { font-size: 1em; margin: 0.5em 0; }
-    .stat { margin-top: 2em; text-align: center; }
-    #progressBar { width: 100%; height: 12px; background: #eee; border-radius: 6px; margin-top: 1em;}
-    #progress { height: 100%; background: #22c55e; border-radius: 6px 0 0 6px;}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upscale Image</title>
 </head>
 <body>
-  <div class="container">
-    <h1>Bot Traffic Sender</h1>
-    <form id="trafficForm">
-      <input type="url" id="url" placeholder="Masukkan URL blog (https://...)" required style="width:100%;padding:8px"><br>
-      <input type="number" id="count" placeholder="Jumlah visitor" min="1" max="100" value="1" required style="width:100%;padding:8px"><br>
-      <button type="submit" id="sendBtn">Kirim Bot Traffic</button>
-    </form>
-    <div class="stat">
-      <div id="statText">Total traffic terkirim: <span id="trafficCount">0</span></div>
-      <div id="progressBar"><div id="progress" style="width:0%"></div></div>
-    </div>
-    <div id="msg" style="color:#f00;margin-top:1em"></div>
-  </div>
-  <script>
-    async function updateStats() {
-      const r = await fetch('/api/stats');
-      const d = await r.json();
-      document.getElementById('trafficCount').textContent = d.total || 0;
-    }
-    updateStats();
-    setInterval(updateStats, 5000);
+    <input type="file" id="fileInput" accept="image/jpeg">
+    <button id="upscaleButton">Upscale Image 4x</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <img id="outputImage" style="display:none;">
 
-    document.getElementById('trafficForm').onsubmit = async function(e) {
-      e.preventDefault();
-      const url = document.getElementById('url').value.trim();
-      const count = parseInt(document.getElementById('count').value, 10) || 1;
-      document.getElementById('sendBtn').disabled = true;
-      document.getElementById('msg').textContent = '';
-      document.getElementById('progress').style.width = '0%';
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-sketch@0.3.0/dist/canvas-sketch.min.js"></script>
+    <script>
+        document.getElementById('upscaleButton').addEventListener('click', function() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = new fabric.Canvas('canvas');
+                        canvas.setWidth(img.width);
+                        canvas.setHeight(img.height);
 
-      let done = 0;
-      for (let i = 0; i < count; i++) {
-        fetch('/api/send-traffic', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ url, count: 1 })
-        }).then(res => res.json()).then(r => {
-          done++;
-          document.getElementById('progress').style.width = ((done/count)*100) + '%';
-          if (done === count) {
-            updateStats();
-            document.getElementById('sendBtn').disabled = false;
-          }
-        }).catch(() => {
-          done++;
-          document.getElementById('progress').style.width = ((done/count)*100) + '%';
-          if (done === count) {
-            updateStats();
-            document.getElementById('sendBtn').disabled = false;
-            document.getElementById('msg').textContent = 'Ada error pada beberapa request';
-          }
+                        const fabricImg = new fabric.Image(img, {
+                            left: 0,
+                            top: 0,
+                            selectable: false
+                        });
+                        canvas.add(fabricImg);
+
+                        // Upscale the image 4x
+                        const scaleFactor = 4;
+                        fabricImg.scaleX = scaleFactor;
+                        fabricImg.scaleY = scaleFactor;
+                        canvas.renderAll();
+
+                        // Create a new canvas for the upscaled image
+                        const upscaledCanvas = document.createElement('canvas');
+                        upscaledCanvas.width = img.width * scaleFactor;
+                        upscaledCanvas.height = img.height * scaleFactor;
+                        const upscaledCtx = upscaledCanvas.getContext('2d');
+
+                        // Draw the upscaled image on the new canvas
+                        upscaledCtx.drawImage(canvas.toDataURL(), 0, 0);
+
+                        // Create a new image element to display the upscaled image
+                        const outputImage = document.getElementById('outputImage');
+                        outputImage.src = upscaledCanvas.toDataURL();
+                        outputImage.style.display = 'block';
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
         });
-      }
-    };
-  </script>
+    </script>
 </body>
 </html>
